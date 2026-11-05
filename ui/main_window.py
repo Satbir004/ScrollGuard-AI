@@ -1,6 +1,6 @@
 """
 Main application window. Holds the sidebar + stacked pages.
-Handles routing, system tray, and global pause hotkey.
+Handles routing, system tray, and pause hotkey.
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QStackedWidget, QSystemTrayIcon,
-    QMenu, QApplication, QMessageBox,
+    QMenu, QApplication,
 )
 
 from ui.components.sidebar import Sidebar
@@ -24,7 +24,6 @@ from ui.pages.settings import SettingsPage
 
 logger = logging.getLogger(__name__)
 
-PLACEHOLDER_TITLES = {}
 
 class MainWindow(QMainWindow):
     pause_toggled = Signal(bool)
@@ -34,6 +33,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("ScrollGuard AI")
         self.resize(1280, 800)
         self.setMinimumSize(1024, 700)
+
+        self._paused = False
 
         # Central layout: sidebar | page stack
         central = QWidget()
@@ -53,33 +54,32 @@ class MainWindow(QMainWindow):
         # Pages
         self.pages: dict[str, QWidget] = {}
         self._add_page("dashboard", DashboardPage())
-        # Live Monitoring is its own page (Phase 7.5)
+
+        # Live Monitoring
         self.monitoring_page = MonitoringPage()
         self.monitoring_page.distraction_recorded.connect(self._refresh_dashboard)
         self._add_page("monitoring", self.monitoring_page)
 
-        # Focus Session page (Phase 7.6)
+        # Focus Session
         self.focus_page = FocusPage()
         self._add_page("focus", self.focus_page)
-        self._add_page("analytics", AnalyticsPage())
-        self._add_page("history", HistoryPage())
-        self._add_page("alerts", AlertsPage())
-        self._add_page("settings", SettingsPage())
 
+        # Wire monitoring ↔ focus
         self.monitoring_page.distraction_started.connect(
             self.focus_page.on_distraction_started
         )
         self.monitoring_page.distraction_ended.connect(
             self.focus_page.on_distraction_ended
         )
-        # Also refresh dashboard when a distraction is recorded
         self.monitoring_page.distraction_recorded.connect(
             self.focus_page._refresh_today_summary
         )
 
-        # Remaining pages still placeholders
-        for key, (title, sub) in PLACEHOLDER_TITLES.items():
-            self._add_page(key, PlaceholderPage(title, sub))
+        # Real pages
+        self._add_page("analytics", AnalyticsPage())
+        self._add_page("history", HistoryPage())
+        self._add_page("alerts", AlertsPage())
+        self._add_page("settings", SettingsPage())
 
         # Start on dashboard
         self.sidebar.set_active("dashboard")
@@ -88,7 +88,7 @@ class MainWindow(QMainWindow):
         # System tray
         self._setup_tray()
 
-        # Global pause hotkey (Ctrl+Shift+P)
+        # Pause hotkey (works while window is focused)
         self._setup_hotkey()
 
     # ---- Page routing ----
@@ -109,17 +109,20 @@ class MainWindow(QMainWindow):
         if dash and hasattr(dash, "_refresh"):
             dash._refresh()
 
+    # ---- Pause toggle (SINGLE definition) ----
+
     def _toggle_pause(self) -> None:
-        paused = getattr(self, "_paused", False)
-        paused = not paused
-        self._paused = paused
+        self._paused = not self._paused
+        paused = self._paused
         self.pause_toggled.emit(paused)
+
         # Mirror the pause into the monitoring page
         if self.monitoring_page is not None:
             if paused and not self.monitoring_page._paused:
                 self.monitoring_page._toggle_pause()
             elif not paused and self.monitoring_page._paused:
                 self.monitoring_page._toggle_pause()
+
         if hasattr(self, "tray_icon"):
             self.tray_icon.setToolTip(
                 "ScrollGuard AI — " + ("PAUSED" if paused else "Monitoring")
@@ -134,7 +137,6 @@ class MainWindow(QMainWindow):
             return
 
         from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
-        # Simple colored square as fallback icon
         pm = QPixmap(32, 32)
         pm.fill(Qt.GlobalColor.transparent)
         p = QPainter(pm)
@@ -174,26 +176,11 @@ class MainWindow(QMainWindow):
         self.raise_()
         self.activateWindow()
 
-    # ---- Global pause hotkey ----
+    # ---- Pause hotkey (works when window has focus) ----
 
     def _setup_hotkey(self) -> None:
-        # Note: QShortcut only works when this window has focus.
-        # True *global* hotkeys require a separate library (keyboard/pynput);
-        # for now this works while the app window is focused — good enough
-        # for Phase 7, will upgrade in Phase 8.
         self._pause_shortcut = QShortcut(QKeySequence("Ctrl+Shift+P"), self)
         self._pause_shortcut.activated.connect(self._toggle_pause)
-
-    def _toggle_pause(self) -> None:
-        paused = getattr(self, "_paused", False)
-        paused = not paused
-        self._paused = paused
-        self.pause_toggled.emit(paused)
-        if hasattr(self, "tray_icon"):
-            self.tray_icon.setToolTip(
-                "ScrollGuard AI — " + ("PAUSED" if paused else "Monitoring")
-            )
-        logger.info("Monitoring %s", "PAUSED" if paused else "RESUMED")
 
     # ---- Close → minimize to tray ----
 
