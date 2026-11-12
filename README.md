@@ -26,20 +26,6 @@ The tricky part isn't detecting a phone (YOLO does that trivially). It's disting
 - **History** — every distraction logged with timestamp, duration, confidence
 - **100% local** — SQLite database, no cloud, no accounts, no telemetry
 
----
-
-## 📸 Screenshots
-
-### Dashboard
-![Dashboard](assets/images/dashboard.png)
-
-### Live Monitoring
-![Live Monitoring](assets/images/monitoring.png)
-
-### Analytics
-![Analytics](assets/images/analytics.png)
-
----
 
 ## 🚀 Quick Start
 
