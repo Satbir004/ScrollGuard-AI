@@ -3,7 +3,7 @@
   "camera": { "index": 0, "width": 1280, "height": 720, "fps": 30 },
   "detection": {
     "yolo_model": "yolov8n.pt",
-    "confidence_threshold": 0.5,
+    "confidence_threshold": 0.35,
     "phone_class_id": 67,
     "yolo_inference_interval": 5,
     "hand_max_num": 1,
@@ -13,7 +13,7 @@
   "state_machine": {
     "phone_visible_min_seconds": 1.0,
     "desk_still_max_px_per_frame": 5.0,
-    "hand_proximity_threshold": 0.6,
+    "hand_proximity_threshold": 0.5,
     "pickup_proximity_threshold": 0.4,
     "pickup_movement_px_per_frame": 15.0,
     "possible_use_min_seconds": 1.5,

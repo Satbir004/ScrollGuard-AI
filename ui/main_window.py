@@ -185,7 +185,19 @@ class MainWindow(QMainWindow):
     # ---- Close → minimize to tray ----
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if hasattr(self, "tray_icon") and self.tray_icon.isVisible():
+        # Only hide-to-tray if monitoring is actually active
+        on_monitoring = self.stack.currentWidget() is self.monitoring_page
+        monitoring_active = (
+            on_monitoring
+            and self.monitoring_page is not None
+            and self.monitoring_page._worker is not None
+        )
+
+        if (
+            monitoring_active
+            and hasattr(self, "tray_icon")
+            and self.tray_icon.isVisible()
+        ):
             self.hide()
             self.tray_icon.showMessage(
                 "ScrollGuard AI",
@@ -195,6 +207,8 @@ class MainWindow(QMainWindow):
             )
             event.ignore()
         else:
+            # Fully quit and release camera
+            self._quit_app()
             event.accept()
 
     def _quit_app(self) -> None:

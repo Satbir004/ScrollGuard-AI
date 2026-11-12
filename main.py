@@ -5,6 +5,8 @@ Boots DB, applies theme, launches MainWindow with system tray.
 import logging
 import os
 import sys
+import atexit
+import logging
 from pathlib import Path
 
 # Silence noisy MediaPipe/absl logs
@@ -39,9 +41,22 @@ def main():
     app.setStyleSheet(APP_STYLESHEET)
 
     window = MainWindow()
-    window.show()
 
-    sys.exit(app.exec())
+    # Safety net: release camera on any exit path
+    def _cleanup():
+        try:
+            if hasattr(window, "monitoring_page") and window.monitoring_page is not None:
+                window.monitoring_page.shutdown()
+        except Exception:
+            logging.getLogger(__name__).exception("Cleanup failed")
+    atexit.register(_cleanup)
+
+    window.show()
+    exit_code = app.exec()
+
+    # Explicit cleanup before process exit (atexit runs later, this runs first)
+    _cleanup()
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

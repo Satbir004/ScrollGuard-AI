@@ -213,6 +213,17 @@ class MonitoringPage(QWidget):
         self.test_alarm_btn.clicked.connect(self._test_alarm)
         control_layout.addWidget(self.test_alarm_btn)
 
+        self.stop_camera_btn = QPushButton("🛑  Stop Camera")
+        self.stop_camera_btn.setObjectName("SecondaryButton")
+        self.stop_camera_btn.setMinimumHeight(38)
+        self.stop_camera_btn.setStyleSheet(
+            "QPushButton { background: #7F1D1D; color: white; "
+            "border: 1px solid #991B1B; border-radius: 8px; padding: 9px 16px; }"
+            "QPushButton:hover { background: #991B1B; }"
+        )
+        self.stop_camera_btn.clicked.connect(self._stop_camera)
+        control_layout.addWidget(self.stop_camera_btn)
+
         content_row.addWidget(control_panel, stretch=0)
         outer.addLayout(content_row, stretch=1)
 
@@ -405,6 +416,24 @@ class MonitoringPage(QWidget):
                     f"padding: 6px 14px; background: {CARD_BG}; "
                     f"border-radius: 12px;"
                 )
+
+    def _stop_camera(self) -> None:
+        """Fully stop the camera and release the device."""
+        logger.info("User requested camera stop")
+        self._stop_worker()
+        self.video_label.setText(
+            "Camera stopped. Click Resume or reopen this page to restart."
+        )
+        self.video_label.setStyleSheet(
+            "background: #000; color: #94A3B8; "
+            "border-radius: 8px; font-size: 14px;"
+        )
+        self.active_indicator.setText("●  STOPPED")
+        self.active_indicator.setStyleSheet(
+            f"color: {TEXT_SECONDARY}; font-size: 13px; font-weight: 600; "
+            f"padding: 6px 14px; background: {CARD_BG}; "
+            f"border-radius: 12px;"
+        )
 
     def _test_alarm(self) -> None:
         """Play the alarm + voice without needing actual detection."""
